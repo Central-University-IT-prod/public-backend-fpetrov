@@ -1,0 +1,51 @@
+services: 
+    redis:
+        image: redis
+        container_name: redis
+        restart: always
+        environment:
+            - REDIS_HOST=127.0.0.1
+            - REDIST_PORT=6379
+        ports:
+            - 6379:6379
+    
+    db:
+        image: postgres
+        container_name: db
+        restart: always
+        environment:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 123
+        volumes:
+          - ./pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+    
+    api:
+        build: ./solution
+        container_name: api
+        restart: always
+        environment:
+            POSTGRES_HOST: 0.0.0.0
+            POSTGRES_PORT: 5432
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: 123
+            POSTGRES_DB: postgres
+        ports:
+            - 5174:5174
+        depends_on:
+            db:
+                condition: service_healthy
+    
+    bot:
+        build: ./solution/UnoTrip.Bot
+        container_name: client
+        restart: always
+        depends_on: 
+            - redis
+            - api
